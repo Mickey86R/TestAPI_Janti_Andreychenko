@@ -1,4 +1,5 @@
 ﻿
+using System.Data;
 using System.Runtime.Serialization;
 
 namespace TestAPI_Janti_Andreychenko
@@ -11,25 +12,25 @@ namespace TestAPI_Janti_Andreychenko
 
         public static async Task<string> GetTime()
         {
-            var dateTime = DateTime.Now;
+            var newTime = TimeZoneInfo.ConvertTime(DateTime.Now, currentTimeZone).ToString();
 
-            var result = $"{dateTime} {GetTimeOffset()}";
+            var result = $"{newTime} {GetTimeOffset()}";
 
             return result;
         }
-
         public static async Task<bool> SetTimeZone(string time)
         {
             bool result;
-            try
+
+            var newTimeZone = OlsonTimeZoneToTimeZoneInfo(time);
+
+            if (newTimeZone != null)
             {
                 currentTimeZone = OlsonTimeZoneToTimeZoneInfo(time);
                 result = true;
             }
-            catch
-            {
+            else
                 result = false;
-            }
 
             return result;
         }
@@ -40,6 +41,9 @@ namespace TestAPI_Janti_Andreychenko
 
             return result;
         }
+
+
+        //---------------------------------------------ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
 
 
         private static TimeZoneInfo OlsonTimeZoneToTimeZoneInfo(string olsonTimeZoneId)
@@ -171,7 +175,7 @@ namespace TestAPI_Janti_Andreychenko
             };
 
             var windowsTimeZoneId = default(string);
-            var windowsTimeZone = currentTimeZone;
+            var windowsTimeZone = default(TimeZoneInfo);
 
             if (olsonWindowsTimes.TryGetValue(olsonTimeZoneId, out windowsTimeZoneId))
             {
