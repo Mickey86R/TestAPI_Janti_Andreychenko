@@ -1,4 +1,5 @@
 ﻿
+using System.ComponentModel;
 using System.Data;
 using System.Runtime.Serialization;
 
@@ -12,11 +13,7 @@ namespace TestAPI_Janti_Andreychenko
 
         public static async Task<string> GetTime()
         {
-            var newTime = TimeZoneInfo.ConvertTime(DateTime.Now, currentTimeZone).ToString();
-
-            var result = $"{newTime} {GetTimeOffset()}";
-
-            return result;
+            return GetTimeInCurrentTimeZone(DateTime.Now);
         }
         public static async Task<bool> SetTimeZone(string time)
         {
@@ -35,9 +32,23 @@ namespace TestAPI_Janti_Andreychenko
             return result;
         }
 
+        /// <summary> 
+        /// метод пытается преобразовать переданную строку в дату, 
+        /// при успешном распознавании строки, 
+        /// переводит время в текущую CerrentTimeZone и возвращает строку в формате «dd.MM.yyyy HH:mm:ss ZZZZ», 
+        /// иначе возвращает пустую строку.
+        /// </summary>
         public static async Task<string> ConvertDate(string time)
         {
             string result = "";
+
+            try
+            {
+                var timeFromString = ConvertTimeUTCFromString(time);
+                result = GetTimeInCurrentTimeZone(timeFromString);
+            }
+            catch { }
+
 
             return result;
         }
@@ -185,13 +196,93 @@ namespace TestAPI_Janti_Andreychenko
             return windowsTimeZone;
         }
 
-        private static string GetTimeOffset()
+        private static string GetTimeOffsetFromCurrentTimeZone()
         {
             var offset = currentTimeZone.BaseUtcOffset.ToString();
 
             offset = offset.Replace(":", "");
 
             var result = offset.Remove(offset.Length - 2);
+
+            return result;
+        }
+
+        private static DateTime ConvertTimeUTCFromString(string time)
+        {
+            var timeParameters = new List<string>();
+
+            if (time.Contains('/'))
+            {
+                var times = time.Split();
+                timeParameters.AddRange(times[0].Split('/').ToList());
+                timeParameters.AddRange(times[1].Split('-').ToList());
+                timeParameters.Add(times[2]);
+
+            }
+            else
+                timeParameters = time.Split('.', ':', ' ').ToList();
+
+            var asd = time.Split();
+
+            List<int> ints = new List<int>();
+
+            int length = timeParameters.Count;
+            if (length < 7)
+                for (int i = 0; i < length; i++)
+                    ints.Add(Convert.ToInt32(timeParameters[i]));
+            else
+                for (int i = 0; i < 6; i++)
+                    ints.Add(Convert.ToInt32(timeParameters[i]));
+
+            var resultDateTime = new DateTime(ints[2], ints[1], ints[0], ints[3], ints[4], 0, DateTimeKind.Utc);
+            if (length != 5)
+                resultDateTime = resultDateTime.AddSeconds(ints[5]);
+
+            var offset = GetTimeOffsetFromString(timeParameters.Last());
+            resultDateTime = resultDateTime.Add(offset);
+
+            //13.01.2023 20:30:00 0500
+            //Asia/Yekaterinburg
+            //var tsc = new DateTimeConverter();
+            //var result = (DateTime)tsc.ConvertFromString(time);
+
+            return resultDateTime;
+        }
+
+        private static TimeSpan GetTimeOffsetFromString(string time)
+        {
+            int HH, mm;
+
+            if (time[0] == '+' || time[0] == '-')
+            {
+                HH = Convert.ToInt32(time.Substring(1, 2));
+                mm = Convert.ToInt32(time.Substring(3, 2));
+            }
+            else
+            {
+                HH = Convert.ToInt32(time.Substring(0, 2));
+                mm = Convert.ToInt32(time.Substring(2, 2));
+            }
+
+            var offset = new DateTime();
+            offset = offset.AddHours(HH);
+            offset = offset.AddMinutes(mm);
+
+            var result = default(TimeSpan);
+            result = TimeSpan.FromHours(offset.Hour) + TimeSpan.FromMinutes(offset.Minute);
+
+            if (time[0] == '-')
+                return result;
+
+            result = TimeSpan.Zero - result;
+            return result;
+        }
+
+        private static string GetTimeInCurrentTimeZone(DateTime time)
+        {
+            var newTime = TimeZoneInfo.ConvertTime(time, currentTimeZone).ToString();
+
+            var result = $"{newTime} {GetTimeOffsetFromCurrentTimeZone()}";
 
             return result;
         }

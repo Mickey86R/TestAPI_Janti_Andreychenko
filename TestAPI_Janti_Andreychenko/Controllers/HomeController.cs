@@ -24,8 +24,8 @@ namespace TestAPI_Janti_Andreychenko.Controllers
         [HttpGet]
         public async Task<ActionResult<string>> ConvertDate(string date)
         {
-            var str = "";
-            return str;
+            var result = await TimeManager.ConvertDate(date);
+            return result;
         }
 
 
