@@ -17,25 +17,23 @@ namespace TestAPI_Janti_Andreychenko.Controllers
         [HttpGet]
         public async Task<ActionResult<string>> GetTime()
         {
-            var timeManager = new TimeManager();
-
-            return await timeManager.GetTime();
+            return await TimeManager.GetTime();
         }
 
         [Route("/ConvertDate")]
         [HttpGet]
         public async Task<ActionResult<string>> ConvertDate(string date)
         {
-            var str = ;
+            var str = "";
             return str;
         }
 
 
         [HttpPost("/SetTimeZone")]
-        public async Task<ActionResult<string>> SetTimeZone(string date)
+        public async Task<ActionResult<bool>> SetTimeZone(string date)
         {
-
-            return string.Empty;
+            var result = await TimeManager.SetTimeZone(date);
+            return result;
         }
 
 
