@@ -1,63 +1,9 @@
-﻿
-using System.ComponentModel;
-using System.Data;
-using System.Runtime.Serialization;
-
-namespace TestAPI_Janti_Andreychenko
+﻿namespace TestAPI_Janti_Andreychenko.Helpers
 {
-    public class TimeManager
+    public class TimeHelper : ITimeHelper
     {
-        private static TimeZoneInfo currentTimeZone = TimeZoneInfo.Utc;
-
-        public TimeManager() { }
-
-        public static async Task<string> GetTime()
-        {
-            return GetTimeInCurrentTimeZone(DateTime.Now);
-        }
-        public static async Task<bool> SetTimeZone(string time)
-        {
-            bool result;
-
-            var newTimeZone = OlsonTimeZoneToTimeZoneInfo(time);
-
-            if (newTimeZone != null)
-            {
-                currentTimeZone = OlsonTimeZoneToTimeZoneInfo(time);
-                result = true;
-            }
-            else
-                result = false;
-
-            return result;
-        }
-
-        /// <summary> 
-        /// метод пытается преобразовать переданную строку в дату, 
-        /// при успешном распознавании строки, 
-        /// переводит время в текущую CerrentTimeZone и возвращает строку в формате «dd.MM.yyyy HH:mm:ss ZZZZ», 
-        /// иначе возвращает пустую строку.
-        /// </summary>
-        public static async Task<string> ConvertDate(string time)
-        {
-            string result = "";
-
-            try
-            {
-                var timeFromString = ConvertTimeUTCFromString(time);
-                result = GetTimeInCurrentTimeZone(timeFromString);
-            }
-            catch { }
-
-
-            return result;
-        }
-
-
-        //---------------------------------------------ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
-
-
-        private static TimeZoneInfo OlsonTimeZoneToTimeZoneInfo(string olsonTimeZoneId)
+        // Служит для преобразования формата часового пояса из Olson в TimeZoneInfo
+        public static TimeZoneInfo OlsonTimeZoneToTimeZoneInfo(string olsonTimeZoneId)
         {
             var olsonWindowsTimes = new Dictionary<string, string>()
             {
@@ -196,7 +142,8 @@ namespace TestAPI_Janti_Andreychenko
             return windowsTimeZone;
         }
 
-        private static string GetTimeOffsetFromCurrentTimeZone()
+        // Получает строку, описывающую часовой пояс, т.н. ZZZZ (прим.: +0400/-0300)
+        public static string GetTimeOffsetFromCurrentTimeZone(TimeZoneInfo currentTimeZone)
         {
             var offset = currentTimeZone.BaseUtcOffset.ToString();
 
@@ -207,82 +154,86 @@ namespace TestAPI_Janti_Andreychenko
             return result;
         }
 
-        private static DateTime ConvertTimeUTCFromString(string time)
+        // Преобразует введённую строку во время по UTC
+        public static DateTime ConvertTimeUTCFromString(string time)
         {
             var timeParameters = new List<string>();
 
+            // Разбиение строки на параметры
             if (time.Contains('/'))
-            {
-                var times = time.Split();
-                timeParameters.AddRange(times[0].Split('/').ToList());
-                timeParameters.AddRange(times[1].Split('-').ToList());
-                timeParameters.Add(times[2]);
-
-            }
+                timeParameters = time.Split('/', '-', ' ').ToList();
             else
                 timeParameters = time.Split('.', ':', ' ').ToList();
 
-            var asd = time.Split();
-
-            List<int> ints = new List<int>();
-
+            // Создание DateTime из полученных параметров
+            DateTime resultDateTime;
             int length = timeParameters.Count;
-            if (length < 7)
-                for (int i = 0; i < length; i++)
-                    ints.Add(Convert.ToInt32(timeParameters[i]));
+            if (length >= 6)
+                resultDateTime = new DateTime(Convert.ToInt32(timeParameters[2]),
+                                            Convert.ToInt32(timeParameters[1]),
+                                            Convert.ToInt32(timeParameters[0]),
+                                            Convert.ToInt32(timeParameters[3]),
+                                            Convert.ToInt32(timeParameters[4]),
+                                            Convert.ToInt32(timeParameters[5]),
+                                            DateTimeKind.Utc);
+
             else
-                for (int i = 0; i < 6; i++)
-                    ints.Add(Convert.ToInt32(timeParameters[i]));
+                resultDateTime = new DateTime(Convert.ToInt32(timeParameters[2]),
+                                            Convert.ToInt32(timeParameters[1]),
+                                            Convert.ToInt32(timeParameters[0]),
+                                            Convert.ToInt32(timeParameters[3]),
+                                            Convert.ToInt32(timeParameters[4]),
+                                            0,
+                                            DateTimeKind.Utc);
 
-            var resultDateTime = new DateTime(ints[2], ints[1], ints[0], ints[3], ints[4], 0, DateTimeKind.Utc);
-            if (length != 5)
-                resultDateTime = resultDateTime.AddSeconds(ints[5]);
-
-            var offset = GetTimeOffsetFromString(timeParameters.Last());
-            resultDateTime = resultDateTime.Add(offset);
-
-            //13.01.2023 20:30:00 0500
-            //Asia/Yekaterinburg
-            //var tsc = new DateTimeConverter();
-            //var result = (DateTime)tsc.ConvertFromString(time);
+            // Если есть параметр часового пояса, находим разницу заданного часового пояса с UTC
+            // и преобразуем заданное время в UTC
+            if (timeParameters.Count == 7)
+            {
+                var offset = GetTimeOffsetFromString(timeParameters.Last());
+                resultDateTime = resultDateTime.Add(offset);
+            }
 
             return resultDateTime;
         }
 
-        private static TimeSpan GetTimeOffsetFromString(string time)
+        // Получение TimeSpan указанного часового пояса
+        // Тут + и - меняются местами, потому что у нас есть возможность только добавить время
+        public static TimeSpan GetTimeOffsetFromString(string time)
         {
-            int HH, mm;
+            bool isNegative;
 
-            if (time[0] == '+' || time[0] == '-')
-            {
-                HH = Convert.ToInt32(time.Substring(1, 2));
-                mm = Convert.ToInt32(time.Substring(3, 2));
-            }
+            if (char.IsDigit(time[0]))
+                isNegative = false;
             else
             {
-                HH = Convert.ToInt32(time.Substring(0, 2));
-                mm = Convert.ToInt32(time.Substring(2, 2));
+                if (time[0] == '+')
+                    isNegative = false;
+                else
+                    isNegative = true;
+
+                time = time.Remove(0, 1);
             }
 
-            var offset = new DateTime();
-            offset = offset.AddHours(HH);
-            offset = offset.AddMinutes(mm);
+            var HH = Convert.ToInt32(time.Substring(0, 2));
+            var mm = Convert.ToInt32(time.Substring(2, 2));
 
             var result = default(TimeSpan);
-            result = TimeSpan.FromHours(offset.Hour) + TimeSpan.FromMinutes(offset.Minute);
+            result = TimeSpan.FromHours(HH) + TimeSpan.FromMinutes(mm);
 
-            if (time[0] == '-')
+            if (isNegative)
                 return result;
 
             result = TimeSpan.Zero - result;
             return result;
         }
 
-        private static string GetTimeInCurrentTimeZone(DateTime time)
+        // Получение строки, описывающей текущее вермя в необходимом формате с CurrentTimeZone
+        public static string GetTimeInCurrentTimeZone(DateTime time, TimeZoneInfo currentTimeZone)
         {
             var newTime = TimeZoneInfo.ConvertTime(time, currentTimeZone).ToString();
 
-            var result = $"{newTime} {GetTimeOffsetFromCurrentTimeZone()}";
+            var result = $"{newTime} {TimeHelper.GetTimeOffsetFromCurrentTimeZone(currentTimeZone)}";
 
             return result;
         }
