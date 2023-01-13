@@ -171,7 +171,7 @@ namespace TestAPI_Janti_Andreychenko
             };
 
             var windowsTimeZoneId = default(string);
-            var windowsTimeZone = default(TimeZoneInfo);
+            var windowsTimeZone = currentTimeZone;
 
             if (olsonWindowsTimes.TryGetValue(olsonTimeZoneId, out windowsTimeZoneId))
             {
