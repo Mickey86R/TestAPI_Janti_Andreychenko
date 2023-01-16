@@ -2,9 +2,6 @@
 {
     public interface ITimeHelper
     {
-        // Служит для преобразования формата часового пояса из Olson в TimeZoneInfo
-        private static TimeZoneInfo OlsonTimeZoneToTimeZoneInfo(string olsonTimeZoneId) => TimeZoneInfo.Utc;
-
         // Получает строку, описывающую часовой пояс, т.н. ZZZZ (прим.: +0400/-0300)
         private static string GetTimeOffsetFromCurrentTimeZone(TimeZoneInfo currentTimeZone) => string.Empty;
 

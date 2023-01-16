@@ -19,17 +19,12 @@ namespace TestAPI_Janti_Andreychenko.Services
         // Устанавливает значение CurrentTimeZone
         public bool SetTimeZone(string time)
         {
-            bool result;
+            var newTimeZone = default(string);
 
-            var newTimeZone = TimeHelper.OlsonTimeZoneToTimeZoneInfo(time);
+            var result = TimeZoneConverter.TZConvert.TryIanaToWindows(time, out newTimeZone);
 
-            if (newTimeZone != null)
-            {
-                currentTimeZone = TimeHelper.OlsonTimeZoneToTimeZoneInfo(time);
-                result = true;
-            }
-            else
-                result = false;
+            if (result)
+                currentTimeZone = TimeZoneInfo.GetSystemTimeZones().First(tz => tz.Id == newTimeZone);
 
             return result;
         }
